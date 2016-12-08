@@ -84,7 +84,7 @@ class UserController extends Controller
             $message->setSeen(true);
             $em->persist($message);
             $em->flush();
-            dump($message);
+
             return $this->render('@App/User/viewMessage.html.twig', ['message' => $message]);
         }
         return $this->render('AppBundle:Home:404.html.twig');
