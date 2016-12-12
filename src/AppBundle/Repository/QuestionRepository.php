@@ -14,33 +14,31 @@ use Doctrine\ORM\Tools\Pagination\Paginator;
  */
 class QuestionRepository extends \Doctrine\ORM\EntityRepository
 {
-    public function getSpecificQuestions($options)
-    {
-        $questions = [];
-
-        foreach ($options['books'] as $book) {
-            $results = $this->createQueryBuilder('q')
-                ->select('q')
-                ->where('q.book = :book')
-                ->andWhere('q.status = :status')
-                ->setParameter('book', $book)
-                ->setParameter('status', 'Added')
-                ->addSelect('RAND() as HIDDEN rand')
-                ->orderBy('rand')
-                ->setMaxResults($options['amount'])
-                ->distinct()
-                ->getQuery()
-                ->getResult();
-            array_push($questions, $results);
-        }
-        return $questions;
-    }
+//    public function getSpecificQuestions($options)
+//    {
+//        $questions = [];
+//
+//        foreach ($options['books'] as $book) {
+//            $results = $this->createQueryBuilder('q')
+//                ->select('q')
+//                ->where('q.book = :book')
+//                ->andWhere('q.status = :status')
+//                ->setParameter('book', $book)
+//                ->setParameter('status', 'Added')
+//                ->addSelect('RAND() as HIDDEN rand')
+//                ->orderBy('rand')
+//                ->setMaxResults($options['amount'])
+//                ->distinct()
+//                ->getQuery()
+//                ->getResult();
+//            array_push($questions, $results);
+//        }
+//        return $questions;
+//    }
 
     public function getRandomQuestions($limit)
     {
-        $questions = [];
-
-        $results = $this->createQueryBuilder('q')
+        return new ArrayCollection($this->createQueryBuilder('q')
             ->select('q')
             ->where('q.status = :status')
             ->addSelect('RAND() as HIDDEN rand')
@@ -49,15 +47,12 @@ class QuestionRepository extends \Doctrine\ORM\EntityRepository
             ->setMaxResults($limit)
             ->distinct()
             ->getQuery()
-            ->getResult();
-
-        array_push($questions, $results);
-        return $questions;
+            ->getResult());
     }
 
     public function getCategoryQuestions($categoryId)
     {
-      return [0 => $questions = $this->createQueryBuilder('q')
+      return new ArrayCollection($this->createQueryBuilder('q')
           ->select('q')
           ->where('q.book = :categoryId')
           ->andWhere('q.status = :status')
@@ -67,7 +62,7 @@ class QuestionRepository extends \Doctrine\ORM\EntityRepository
           ->orderBy('rand')
           ->setMaxResults(20)
           ->getQuery()
-          ->getResult()];
+          ->getResult());
     }
 
     const MAX_RESULTS = 20;

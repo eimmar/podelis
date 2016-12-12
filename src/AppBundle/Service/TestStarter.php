@@ -23,29 +23,36 @@ class TestStarter
 
     /**
      * @param bool $trackResults
-     * @param array $questions
+     * @param ArrayCollection $questions
      * @param string $timePerQuestion
      */
     public function startTest($questions, $timePerQuestion, $trackResults)
     {
         $test = [
-            'questionGroups'    => $questions,
+            'questions'    => $questions,
             'trackResults'      => $trackResults,
-            'solved'            => [],
+            'solved'            => new ArrayCollection(),
             'started'           => new \DateTime(),
-            'endsAt'            => new \DateTime($this->setTimeLimit($timePerQuestion, $questions)),
-            'answered'          => []
+            'endsAt'            => new \DateTime($this->setTimeLimit($timePerQuestion, $questions->count())),
+            'answered'          => new ArrayCollection(),
+            'isCorrect' => new ArrayCollection()
         ];
 
         $this->session->clear();
         $this->session->replace($test);
     }
 
-    public function setTimeLimit($timePerQuestion, $questions)
+    /**
+     * @param string $timePerQuestion
+     * @param int $numOfQuestions
+     * @return string mixed
+     * @throws \Exception
+     */
+    public function setTimeLimit($timePerQuestion, $numOfQuestions)
     {
         if (preg_match('#[0-9]+#', $timePerQuestion, $time)) {
             $time = intval($time);
-            $time = $time * count($questions, COUNT_RECURSIVE) - count($questions);
+            $time = $time * $numOfQuestions;
 
             return preg_replace('#[0-9]+#', $time, $timePerQuestion);
         }

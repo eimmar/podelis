@@ -498,9 +498,9 @@ class User extends BaseUser
 
     public function updateStats($time, $answers)
     {
-        $correct            = count(array_map(function ($answer) {
+        $correct            = count(array_filter($answers, function ($answer) {
             return $answer;
-        }, $answers));
+        }));
         $this->correct      += $correct;
         $this->incorrect    += count($answers) - $correct;
         $this->timeSpent    += $time->s + $time->i * 60 + $time->h * 3600;

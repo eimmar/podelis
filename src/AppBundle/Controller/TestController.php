@@ -14,6 +14,7 @@ use AppBundle\Entity\QuestionReport;
 use AppBundle\Form\QuestionReportType;
 use AppBundle\Form\QuestionType;
 use AppBundle\Form\TestQuestionType;
+use Doctrine\Common\Collections\ArrayCollection;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
@@ -29,12 +30,15 @@ class TestController extends Controller
      */
     public function quickTestAction()
     {
-        $qRepository = $this->getDoctrine()->getRepository('AppBundle:Question');
-        $questions = $qRepository->getRandomQuestions(10);
+        $questions = $this->getDoctrine()->getRepository('AppBundle:Question')->getRandomQuestions(10);
 
-        if (!empty($questions[0][0])) {
+        if (!$questions->isEmpty()) {
             $this->get('app.test_starter')->startTest($questions, '+2 minute,', false);
-            return $this->redirectToRoute('question', ['id' => $questions[0][0]->getId()]);
+            return $this->redirectToRoute('question',
+                [
+                    'id'    => $questions->first()->getId(),
+                    'slug'  => $questions->first()->slugify()
+                ]);
         }
         return $this->render('@App/Home/404.html.twig');
     }
@@ -45,7 +49,6 @@ class TestController extends Controller
     public function categoryListAction()
     {
         $categories = $this->getDoctrine()->getRepository('AppBundle:Book')->findAll();
-
         return $this->render('@App/TestPages/categories.html.twig', ['categories' => $categories]);
     }
 
@@ -54,20 +57,25 @@ class TestController extends Controller
      */
     public function categoryTestAction($id)
     {
+        /** @var ArrayCollection $questions */
         $questions = $this->getDoctrine()->getRepository('AppBundle:Question')->getCategoryQuestions($id);
 
-        if (!empty($questions[0][0])) {
+        if (!$questions->isEmpty()) {
             $this->get('app.test_starter')->startTest($questions, '+1 minute,', true);
-            return $this->redirectToRoute('question', ['id' => $questions[0][0]->getId()]);
+            return $this->redirectToRoute('question',
+                [
+                    'id'    => $questions->first()->getId(),
+                    'slug'  => $questions->first()->slugify()
+                ]);
         }
         return $this->render('@App/Home/404.html.twig');
     }
 
     /**
-     * @Route("/question/{id}", name="question")
+     * @Route("/question/{id}/{slug}", name="question")
      *
      */
-    public function testAction(Request $request, $id)
+    public function testAction(Request $request, $id, $slug)
     {
 
         $repository = $this->getDoctrine()->getRepository('AppBundle:Question');
@@ -75,9 +83,12 @@ class TestController extends Controller
         $question = $repository->findOneBy(['id' => $id]);
         $session = $this->get('session');
 
-        if ($question && $testControl->questionInTest($id)) {
+        if ($question && $testControl->questionInTest($question)) {
             if ($session->get('endsAt') <= new \DateTime('now')) {
-                return $this->redirectToRoute('testResults', ['id' => $testControl->getQuestionGroups()[0][0]->getId()]);
+                return $this->forward('testResults', [
+                    'id' => $testControl->getQuestions()->first()->getId(),
+                    'slug' => $testControl->getQuestions()->first()->slugify()
+                ]);
             }
             $form = $this->createForm(TestQuestionType::class, [
                 'question' => $question, 'answered' => $session->get('answered')
@@ -86,24 +97,33 @@ class TestController extends Controller
 
             if ($form->get('next')->isClicked()) {
                 $testControl->addAnswer($id, $form['answers']->getData());
-                return $this->redirectToRoute('question', ['id' => $testControl->getNext($id)]);
+                return $this->forward('question', [
+                    'id' => $testControl->getNext($question)->getId(),
+                    'slug' => $testControl->getNext($question)->slugify()
+                ]);
             }
 
             if ($form->get('previous')->isClicked()) {
                 $testControl->addAnswer($id, $form['answers']->getData());
-                return $this->redirectToRoute('question', ['id' => $testControl->getPrevious($id)]);
+                return $this->forward('question', [
+                    'id' => $testControl->getNext($question)->getId(),
+                    'slug' => $testControl->getNext($question)->slugify()
+                ]);
             }
 
             if ($form->get('submit')->isClicked()) {
-                $testControl->submit($id, $form['answers']->getData());
+                $testControl->addAnswer($id, $form['answers']->getData());
 
-                return $this->redirectToRoute('testResults', ['id' => $testControl->getQuestionGroups()[0][0]->getId()]);
+                return $this->redirectToRoute('testResults', [
+                    'id' => $testControl->getQuestions()->first()->getId(),
+                    'slug' => $testControl->getQuestions()->first()->slugify()
+                ]);
             }
 
             return $this->render('@App/TestPages/question.html.twig', [
                 'form' => $form->createView(),
                 'current' => $question,
-                'index' => $testControl->getCurrentIndex($id),
+                'index' => $testControl->getCurrentIndex($question),
                 'solved' => $testControl->isQuestionSolved($id)
             ]);
         }
@@ -169,11 +189,11 @@ class TestController extends Controller
             $form->handleRequest($request);
 
             if ($form->get('next')->isClicked()) {
-                return $this->redirectToRoute('testResults', ['id' => $testControl->getNext($id)]);
+                return $this->forward('testResults', ['id' => $testControl->getNext($id)]);
             }
 
             if ($form->get('previous')->isClicked()) {
-                return $this->redirectToRoute('testResults', ['id' => $testControl->getPrevious($id)]);
+                return $this->forward('testResults', ['id' => $testControl->getPrevious($id)]);
             }
 
             if ($form->get('submit')->isClicked()) {
